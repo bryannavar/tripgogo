@@ -6,17 +6,78 @@
   <title>TripGoGo - Pago exitoso</title>
   <style>
     body { font-family: Arial, sans-serif; background: #0f0f1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
-    .container { padding: 40px; }
+    .container { padding: 40px; max-width: 400px; }
     .emoji { font-size: 64px; margin-bottom: 20px; }
     h1 { font-size: 28px; margin-bottom: 10px; color: #7F77DD; }
-    p { color: rgba(255,255,255,0.6); font-size: 16px; line-height: 1.5; }
+    p { color: rgba(255,255,255,0.6); font-size: 16px; line-height: 1.5; margin-bottom: 20px; }
+    .status { font-size: 14px; color: rgba(255,255,255,0.4); margin-top: 20px; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #7F77DD; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .success-msg { color: #4CAF50; font-size: 16px; font-weight: 600; margin-top: 16px; display: none; }
+    .error-msg { color: #f44336; font-size: 14px; margin-top: 16px; display: none; }
+    .open-app-btn { display: none; background: #7F77DD; color: white; border: none; padding: 14px 28px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px; text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="emoji">✅</div>
-    <h1>¡Pago exitoso!</h1>
-    <p>Tu pago fue procesado correctamente.<br>Volvé a TripGoGo y tocá<br><strong>"Ya pagué — confirmar pago"</strong></p>
+    <div class="emoji">✈️</div>
+    <h1>TripGoGo</h1>
+    <p>Procesando tu pago...</p>
+    <div class="status" id="status">
+      <span class="spinner"></span> Confirmando con PayPal...
+    </div>
+    <div class="success-msg" id="successMsg">✅ ¡Créditos agregados exitosamente!</div>
+    <div class="error-msg" id="errorMsg"></div>
+    <a href="tripgogo://" class="open-app-btn" id="openAppBtn">Volver a TripGoGo</a>
   </div>
+
+  <script>
+    const SUPABASE_URL = 'https://sclefirexpdozplxkmqc.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjbGVmaXJleHBkb3pwbHhrbXFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4NjY5NjMsImV4cCI6MjA2NTQ0Mjk2M30.4z_XjFkbH8pOKSS0p1IB3epkjJRFmmpxv1sD0w2xpvc'
+
+    async function capturePayment() {
+      // Obtener el token (order_id) de PayPal desde el URL
+      const params = new URLSearchParams(window.location.search)
+      const token = params.get('token')
+
+      if (!token) {
+        showError('No se encontró el ID de la orden.')
+        return
+      }
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/capture-paypal-order`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ order_id: token })
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          document.getElementById('status').style.display = 'none'
+          document.getElementById('successMsg').style.display = 'block'
+          document.getElementById('openAppBtn').style.display = 'inline-block'
+          document.querySelector('p').textContent = '¡Tu pago fue procesado correctamente!'
+        } else {
+          showError(data.error || 'No se pudo confirmar el pago.')
+        }
+      } catch (e) {
+        showError('Error de conexión. Por favor volvé a la app y tocá "Ya pagué".')
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('status').style.display = 'none'
+      document.getElementById('errorMsg').textContent = msg
+      document.getElementById('errorMsg').style.display = 'block'
+      document.getElementById('openAppBtn').style.display = 'inline-block'
+    }
+
+    capturePayment()
+  </script>
 </body>
 </html>
