@@ -63,7 +63,7 @@
           document.getElementById('openAppBtn').style.display = 'inline-block'
           document.querySelector('p').textContent = '¡Tu pago fue procesado correctamente!'
         } else {
-          showError(JSON.stringify(data))
+           showError(data.error || 'No se pudo confirmar el pago. Verifique tener fondos y la tarjeta activada')
         }
       } catch (e) {
         showError('Error de conexión. Por favor volvé a la app y tocá "Ya pagué".')
